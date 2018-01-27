@@ -1,0 +1,81 @@
+---
+title: "Practical ML Week 4 Project"
+author: "Howard Paget"
+date: "27 January 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Data and Libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+library(ggplot2)
+```
+
+Load the training and testing csvs, training is used for fitting the model and testing is used in the Coursera quiz. To estimate the out of sample error the training set is split 80/20 into a new training and testing set.  
+
+```{r}
+training_orig <- read.csv("pml-training.csv")
+testing_orig <- read.csv("pml-testing.csv")
+
+set.seed(1)
+trainingSplit <- createDataPartition(y=training_orig$classe, p=0.8, list=FALSE)
+training <- training_orig[trainingSplit, ]
+testing <- training_orig[-trainingSplit, ]
+```
+
+Remove variables that have low variance, are mostly NA, or not appropreiate for use in the model (such as user_name).
+
+```{r}
+lowVar <- nearZeroVar(training)
+training <- training[, -lowVar]
+testing <- testing[, -lowVar]
+testing_orig <- testing_orig[, -lowVar]
+
+mostlyNA <- sapply(training, function(x) mean(is.na(x))) > 0.95
+training <- training[, mostlyNA == FALSE]
+testing <- testing[, mostlyNA == FALSE]
+testing_orig <- testing_orig[, mostlyNA == FALSE]
+
+training <- training[, -(1:5)]
+testing <- testing[, -(1:5)]
+testing_orig <- testing_orig[, -c(1:5)]
+```
+
+## Modelling
+
+The following code fits a random forest to the activity data using all of the factors left in the dataset after preprocessing to predict classe. 5-fold cross validation is used to avoid overfitting hence improving likely performance on real world or out of sample test data.
+
+```{r, cache=TRUE}
+cv5Fold <- trainControl(method="cv", number=5, verboseIter=FALSE)
+
+fit <- train(classe ~ ., data=training, method="rf", trControl=cv5Fold)
+fit$finalModel
+```
+
+The summary above shows that the model has a very low error of 0.2%.
+
+## Out of Sample Error
+
+To calculate the out of sample error we will use the 20% testing data set aside earlier.
+
+```{r}
+preds <- predict(fit, newdata=testing)
+
+confusionMatrix(testing$classe, preds)
+```
+
+The model predicts classe with a 99.8% accuracy in the testing set hence the **estimated out of sample error is 0.2%**.
+
+## Predict Classe of 20 Test Case for the Quiz
+
+The model has a high accuracy level hence should be sufficient to pass the quiz.
+
+```{r}
+testPreds <- predict(fit, newdata=testing_orig)
+data.frame(classe=testPreds)
+```
