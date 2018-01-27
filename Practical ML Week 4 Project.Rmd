@@ -9,6 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Introduction
+
+The goal of this project is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict using machine learning which activity they were performance.
+
 ## Load Data and Libraries
 
 ```{r, message=FALSE, warning=FALSE}
